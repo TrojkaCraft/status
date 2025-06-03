@@ -21,6 +21,8 @@
     h1 {
       color: #a8e63a;
       margin-bottom: 1rem;
+      opacity: 0;
+      animation: fadeIn 1s ease-in-out forwards;
     }
     .status-box {
       background-color: #21262d;
@@ -29,10 +31,14 @@
       border: 2px solid #30363d;
       max-width: 600px;
       width: 90%;
+      transform: translateY(20px);
+      opacity: 0;
+      animation: slideIn 1s ease-out 0.5s forwards;
     }
     .status {
       color: #a8e63a;
       margin: 0.5rem 0;
+      transition: color 0.3s ease;
     }
     .offline {
       color: #ff5555 !important;
@@ -41,43 +47,34 @@
       margin-top: 1rem;
       color: #8b949e;
       font-size: 0.9rem;
+      opacity: 0;
+      animation: fadeIn 1s ease-in-out 1s forwards;
+    }
+    @keyframes fadeIn {
+      to {
+        opacity: 1;
+      }
+    }
+    @keyframes slideIn {
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
     }
   </style>
 </head>
 <body>
   <h1>TrojkaCraft - Stav serverů</h1>
   <div class="status-box">
-    <p class="status">
-      <strong>MC Server (mc.3zscraft.cz):</strong>
-      <span id="server-status">Načítám...</span>
-    </p>
-    <p class="status">
-      <strong>Hráči online:</strong>
-      <span id="players-count">Načítám...</span>
-    </p>
-    <p class="status">
-      <strong>Max hráčů:</strong>
-      <span id="max-players">Načítám...</span>
-    </p>
-    <p class="status">
-      <strong>Dynmapa:</strong>
-      <span id="map-status">Načítám...</span>
-    </p>
-    <p class="status">
-      <strong>www.3zscraft.cz:</strong>
-      <span id="web-status">Načítám...</span>
-    </p>
+    <p class="status"><strong>mc.3zscraft.cz:</strong> <span id="mc-status">Načítám...</span></p>
+    <p class="status"><strong>map.3zscraft.cz:</strong> <span id="map-status">Načítám...</span></p>
+    <p class="status"><strong>www.3zscraft.cz:</strong> <span id="web-status">Načítám...</span></p>
     <p class="status offline" id="hosting-status"></p>
     <p class="countdown">Obnovení za <span id="countdown">30</span> s</p>
   </div>
 
   <script>
-    const serverIP = 'mc.3zscraft.cz';
-
-    const serverStatusEl = document.getElementById('server-status');
-    const playersCountEl = document.getElementById('players-count');
-    const maxPlayersEl = document.getElementById('max-players');
-
+    const mcStatusEl = document.getElementById('mc-status');
     const mapStatusEl = document.getElementById('map-status');
     const webStatusEl = document.getElementById('web-status');
     const hostingStatusEl = document.getElementById('hosting-status');
@@ -86,39 +83,34 @@
     let mcOnline = false;
     let mapOnline = false;
 
-    async function getServerStats() {
-      try {
-        const response = await fetch(`https://api.mcsrvstat.us/2/${serverIP}`);
-        const data = await response.json();
+    async function checkWithTimeout(url, timeout = 5000) {
+      return Promise.race([
+        fetch(url, { method: 'HEAD', mode: 'cors', cache: 'no-cache' }),
+        new Promise((_, reject) => setTimeout(() => reject(new Error('Timeout')), timeout))
+      ]);
+    }
 
-        if (data.online) {
+    async function checkMC() {
+      try {
+        const res = await fetch('https://sport-began.gl.joinmc.link', { method: 'HEAD', mode: 'cors', cache: 'no-cache' });
+        if (res.ok) {
           mcOnline = true;
-          serverStatusEl.textContent = 'Online';
-          playersCountEl.textContent = data.players.online ?? 'Není k dispozici';
-          maxPlayersEl.textContent = data.players.max ?? 'Není k dispozici';
-          serverStatusEl.className = playersCountEl.className = maxPlayersEl.className = 'status';
+          mcStatusEl.textContent = 'Online';
+          mcStatusEl.className = 'status';
         } else {
-          mcOnline = false;
-          serverStatusEl.textContent = 'Offline';
-          playersCountEl.textContent = 'Není k dispozici';
-          maxPlayersEl.textContent = 'Není k dispozici';
-          serverStatusEl.className = playersCountEl.className = maxPlayersEl.className = 'status offline';
+          throw new Error('Server neodpovídá správně');
         }
-      } catch (error) {
-        console.error('Chyba při získávání dat:', error);
+      } catch {
         mcOnline = false;
-        serverStatusEl.textContent = 'Chyba při načítání';
-        playersCountEl.textContent = 'Chyba při načítání';
-        maxPlayersEl.textContent = 'Chyba při načítání';
-        serverStatusEl.className = playersCountEl.className = maxPlayersEl.className = 'status offline';
+        mcStatusEl.textContent = 'Offline';
+        mcStatusEl.className = 'status offline';
       }
     }
 
     function checkMap() {
       return new Promise((resolve) => {
         const img = new Image();
-        // Kontrola JSON souboru z dynmapy s timestampem proti cache
-        img.src = 'http://feature-cards.gl.at.ply.gg:26636/tiles/_markers_/marker_world.json?cache=' + Date.now();
+        img.src = 'http://map.3zscraft.cz:26636/tiles/_markers_/marker_world.json?cache=' + Date.now();
 
         img.onload = () => {
           mapOnline = true;
@@ -138,13 +130,9 @@
 
     async function checkWeb() {
       try {
-        const res = await fetch('https://www.3zscraft.cz');
-        if (res.ok) {
-          webStatusEl.textContent = 'Online';
-          webStatusEl.className = 'status';
-        } else {
-          throw new Error('Offline');
-        }
+        await checkWithTimeout('https://www.3zscraft.cz');
+        webStatusEl.textContent = 'Online';
+        webStatusEl.className = 'status';
       } catch {
         webStatusEl.textContent = 'Offline';
         webStatusEl.className = 'status offline';
@@ -152,20 +140,17 @@
     }
 
     async function checkAll() {
-      serverStatusEl.textContent = playersCountEl.textContent = maxPlayersEl.textContent = 
-        mapStatusEl.textContent = webStatusEl.textContent = 'Načítám...';
+      mcStatusEl.textContent = mapStatusEl.textContent = webStatusEl.textContent = 'Načítám...';
       hostingStatusEl.textContent = '';
 
       if (!navigator.onLine) {
-        serverStatusEl.textContent = playersCountEl.textContent = maxPlayersEl.textContent =
-          mapStatusEl.textContent = webStatusEl.textContent = 'Offline (bez připojení)';
-        serverStatusEl.className = playersCountEl.className = maxPlayersEl.className =
-          mapStatusEl.className = webStatusEl.className = 'status offline';
+        mcStatusEl.textContent = mapStatusEl.textContent = webStatusEl.textContent = 'Offline (bez připojení)';
+        mcStatusEl.className = mapStatusEl.className = webStatusEl.className = 'status offline';
         hostingStatusEl.textContent = 'Není připojeno k internetu';
         return;
       }
 
-      await Promise.all([getServerStats(), checkMap(), checkWeb()]);
+      await Promise.all([checkMC(), checkMap(), checkWeb()]);
 
       if (!mcOnline && !mapOnline) {
         hostingStatusEl.textContent = 'Náš hosting je vypnutý.';
