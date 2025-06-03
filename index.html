@@ -58,7 +58,7 @@
     async function checkDynmap() {
       const el = document.getElementById("dynmap");
       try {
-        const res = await fetch("http://map.3zscraft.cz:26636", { mode: "no-cors" });
+        await fetch("http://feature-cards.gl.at.ply.gg:26636", { mode: "no-cors" });
         el.textContent = "Dynmapa je ONLINE";
         el.className = "status online";
       } catch {
@@ -70,7 +70,7 @@
     async function checkWeb() {
       const el = document.getElementById("web");
       try {
-        const res = await fetch("https://www.3zscraft.cz", { mode: "no-cors" });
+        await fetch("https://www.3zscraft.cz", { mode: "no-cors" });
         el.textContent = "Web je ONLINE";
         el.className = "status online";
       } catch {
@@ -83,7 +83,6 @@
     checkDynmap();
     checkWeb();
 
-    // obnova každých 15 sekund
     setInterval(() => {
       checkMC();
       checkDynmap();
