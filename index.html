@@ -1,62 +1,161 @@
 <!DOCTYPE html>
 <html lang="cs">
 <head>
-<meta charset="UTF-8" />
-<title>Status Serverů</title>
-<style>
-  body { font-family: Arial, sans-serif; background: #111; color: #eee; text-align: center; padding: 2rem;}
-  .online { color: #a8e63a; }
-  .offline { color: #ff5555; }
-</style>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>TrojkaCraft Status</title>
+  <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;700&display=swap" rel="stylesheet" />
+  <style>
+    body {
+      margin: 0;
+      font-family: 'Montserrat', sans-serif;
+      background-color: #0d1117;
+      color: #e6edf3;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      text-align: center;
+    }
+    h1 {
+      color: #a8e63a;
+      margin-bottom: 1rem;
+      opacity: 0;
+      animation: fadeIn 1s ease-in-out forwards;
+    }
+    .status-box {
+      background-color: #21262d;
+      padding: 2rem;
+      border-radius: 10px;
+      border: 2px solid #30363d;
+      max-width: 600px;
+      width: 90%;
+      transform: translateY(20px);
+      opacity: 0;
+      animation: slideIn 1s ease-out 0.5s forwards;
+    }
+    .status {
+      color: #a8e63a;
+      margin: 0.5rem 0;
+      transition: color 0.3s ease;
+    }
+    .offline {
+      color: #ff5555 !important;
+    }
+    .countdown {
+      margin-top: 1rem;
+      color: #8b949e;
+      font-size: 0.9rem;
+      opacity: 0;
+      animation: fadeIn 1s ease-in-out 1s forwards;
+    }
+    @keyframes fadeIn {
+      to {
+        opacity: 1;
+      }
+    }
+    @keyframes slideIn {
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+  </style>
 </head>
 <body>
+  <h1>TrojkaCraft - Stav serverů</h1>
+  <div class="status-box">
+    <p class="status"><strong>mc.3zscraft.cz:</strong> <span id="mc-status">Načítám...</span></p>
+    <p class="status"><strong>www.3zscraft.cz:</strong> <span id="web-status">Načítám...</span></p>
+    <p class="status"><strong>Dynmapa:</strong> <span id="map-status">Nesledována</span></p>
+    <p class="status offline" id="hosting-status"></p>
+    <p class="countdown">Obnovení za <span id="countdown">30</span> s</p>
+  </div>
 
-<h1>Status serverů</h1>
-<p>MC Server: <span id="mc-status">Načítám...</span></p>
-<p>Dynmapa: <span id="map-status">Načítám...</span></p>
+  <script>
+    const mcStatusEl = document.getElementById('mc-status');
+    const webStatusEl = document.getElementById('web-status');
+    const mapStatusEl = document.getElementById('map-status');  // nyní jen text Nesledována
+    const hostingStatusEl = document.getElementById('hosting-status');
+    const countdownEl = document.getElementById('countdown');
 
-<script>
-  const mcStatusEl = document.getElementById('mc-status');
-  const mapStatusEl = document.getElementById('map-status');
+    let mcOnline = false;
 
-  // Kontrola Dynmapy načtením JSON přes Image
-  function checkDynmap() {
-    return new Promise(resolve => {
-      const img = new Image();
-      img.src = 'http://map.3zscraft.cz:26636/tiles/_markers_/marker_world.json?cache=' + Date.now();
-      img.onload = () => {
-        mapStatusEl.textContent = 'Online';
-        mapStatusEl.className = 'online';
-        resolve(true);
-      };
-      img.onerror = () => {
-        mapStatusEl.textContent = 'Offline';
-        mapStatusEl.className = 'offline';
-        resolve(false);
-      };
-    });
-  }
+    async function checkMC() {
+      try {
+        const res = await fetch('https://api.mcsrvstat.us/2/mc.3zscraft.cz');
+        const data = await res.json();
 
-  // Kontrola MC serveru přes fetch (pouze pokud má HTTP endpoint)
-  async function checkMC() {
-    try {
-      const res = await fetch('https://mc.3zscraft.cz', { method: 'HEAD', cache: 'no-cache' });
-      if (res.ok) {
-        mcStatusEl.textContent = 'Online';
-        mcStatusEl.className = 'online';
-      } else {
-        throw new Error('Server neodpovídá');
+        if (data.online) {
+          mcOnline = true;
+          mcStatusEl.textContent = 'Online';
+          mcStatusEl.className = 'status';
+        } else {
+          mcOnline = false;
+          mcStatusEl.textContent = 'Offline';
+          mcStatusEl.className = 'status offline';
+        }
+      } catch {
+        mcOnline = false;
+        mcStatusEl.textContent = 'Chyba při načítání';
+        mcStatusEl.className = 'status offline';
       }
-    } catch {
-      mcStatusEl.textContent = 'Offline';
-      mcStatusEl.className = 'offline';
     }
-  }
 
-  // Spustíme obě kontroly
-  checkMC();
-  checkDynmap();
-</script>
+    async function checkWeb() {
+      try {
+        const res = await fetch('https://www.3zscraft.cz', { method: 'HEAD' });
+        if (res.ok) {
+          webStatusEl.textContent = 'Online';
+          webStatusEl.className = 'status';
+        } else {
+          throw new Error('Offline');
+        }
+      } catch {
+        webStatusEl.textContent = 'Offline';
+        webStatusEl.className = 'status offline';
+      }
+    }
 
+    async function checkAll() {
+      mcStatusEl.textContent = 'Načítám...';
+      webStatusEl.textContent = 'Načítám...';
+      hostingStatusEl.textContent = '';
+      mapStatusEl.textContent = 'Nesledována';
+      mapStatusEl.className = 'status';
+
+      if (!navigator.onLine) {
+        mcStatusEl.textContent = 'Offline (bez připojení)';
+        webStatusEl.textContent = 'Offline (bez připojení)';
+        mcStatusEl.className = webStatusEl.className = 'status offline';
+        hostingStatusEl.textContent = 'Není připojeno k internetu';
+        return;
+      }
+
+      await Promise.all([checkMC(), checkWeb()]);
+
+      if (!mcOnline) {
+        hostingStatusEl.textContent = 'Náš hosting je vypnutý.';
+      }
+    }
+
+    function startCountdown() {
+      let time = 30;
+      countdownEl.textContent = time;
+      const interval = setInterval(() => {
+        time--;
+        countdownEl.textContent = time;
+        if (time <= 0) {
+          clearInterval(interval);
+          checkAll();
+          startCountdown();
+        }
+      }, 1000);
+    }
+
+    checkAll();
+    startCountdown();
+  </script>
 </body>
 </html>
