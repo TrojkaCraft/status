@@ -87,7 +87,7 @@
 
     async function checkWithTimeout(url, timeout = 5000) {
       return Promise.race([
-        fetch(url, { method: 'HEAD', mode: 'no-cors' }),
+        fetch(url, { method: 'HEAD' }),
         new Promise((_, reject) => setTimeout(() => reject(new Error('Timeout')), timeout))
       ]);
     }
@@ -108,7 +108,7 @@
 
     async function checkMap() {
       try {
-        await checkWithTimeout('http://map.3zscraft.cz:26636');
+        await checkWithTimeout('https://map.3zscraft.cz:26636');
         mapOnline = true;
         mapStatusEl.textContent = 'Online';
         mapStatusEl.className = 'status';
@@ -121,7 +121,7 @@
 
     async function checkWeb() {
       try {
-        await checkWithTimeout('http://www.3zscraft.cz');
+        await checkWithTimeout('https://www.3zscraft.cz');
         webStatusEl.textContent = 'Online';
         webStatusEl.className = 'status';
       } catch {
