@@ -50,11 +50,13 @@
       opacity: 0;
       animation: fadeIn 1s ease-in-out 1s forwards;
     }
+
     @keyframes fadeIn {
       to {
         opacity: 1;
       }
     }
+
     @keyframes slideIn {
       to {
         opacity: 1;
@@ -85,34 +87,41 @@
 
     async function checkWithTimeout(url, timeout = 5000) {
       return Promise.race([
-        fetch(url, { method: 'HEAD', mode: 'cors', cache: 'no-cache' }),
+        fetch(url, { method: 'GET', mode: 'no-cors' }),
         new Promise((_, reject) => setTimeout(() => reject(new Error('Timeout')), timeout))
       ]);
     }
 
     async function checkMC() {
       try {
-        const res = await fetch('sport-began.gl.joinmc.link', { method: 'HEAD', mode: 'cors', cache: 'no-cache' });
-        if (res.ok) {
-          mcOnline = true;
-          mcStatusEl.textContent = 'Online';
+        const res = await fetch('https://api.mcsrvstat.us/2/mc.3zscraft.cz');
+        const data = await res.json();
+        mcOnline = data.online;
+        if(mcOnline) {
+          const playersOnline = data.players && data.players.online != null ? data.players.online : 0;
+          mcStatusEl.textContent = `Online — hráčů: ${playersOnline}`;
           mcStatusEl.className = 'status';
         } else {
-          throw new Error('Server neodpovídá správně');
+          mcStatusEl.textContent = 'Offline';
+          mcStatusEl.className = 'status offline';
         }
       } catch {
         mcOnline = false;
-        mcStatusEl.textContent = 'Offline';
+        mcStatusEl.textContent = 'Chyba';
         mcStatusEl.className = 'status offline';
       }
     }
 
     async function checkMap() {
       try {
-        await checkWithTimeout('feature-cards.gl.at.ply.gg');
-        mapOnline = true;
-        mapStatusEl.textContent = 'Online';
-        mapStatusEl.className = 'status';
+        const res = await fetch('feature-cards.gl.at.ply.gg', { method: 'GET' });
+        if (res.ok) {
+          mapOnline = true;
+          mapStatusEl.textContent = 'Online';
+          mapStatusEl.className = 'status';
+        } else {
+          throw new Error('Offline');
+        }
       } catch {
         mapOnline = false;
         mapStatusEl.textContent = 'Offline';
@@ -122,9 +131,13 @@
 
     async function checkWeb() {
       try {
-        await checkWithTimeout('https://www.3zscraft.cz');
-        webStatusEl.textContent = 'Online';
-        webStatusEl.className = 'status';
+        const res = await fetch('https://www.3zscraft.cz');
+        if (res.ok) {
+          webStatusEl.textContent = 'Online';
+          webStatusEl.className = 'status';
+        } else {
+          throw new Error('Offline');
+        }
       } catch {
         webStatusEl.textContent = 'Offline';
         webStatusEl.className = 'status offline';
