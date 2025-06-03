@@ -1,178 +1,62 @@
 <!DOCTYPE html>
 <html lang="cs">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>TrojkaCraft Status</title>
-  <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;700&display=swap" rel="stylesheet" />
-  <style>
-    body {
-      margin: 0;
-      font-family: 'Montserrat', sans-serif;
-      background-color: #0d1117;
-      color: #e6edf3;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      min-height: 100vh;
-      text-align: center;
-    }
-    h1 {
-      color: #a8e63a;
-      margin-bottom: 1rem;
-      opacity: 0;
-      animation: fadeIn 1s ease-in-out forwards;
-    }
-    .status-box {
-      background-color: #21262d;
-      padding: 2rem;
-      border-radius: 10px;
-      border: 2px solid #30363d;
-      max-width: 600px;
-      width: 90%;
-      transform: translateY(20px);
-      opacity: 0;
-      animation: slideIn 1s ease-out 0.5s forwards;
-    }
-    .status {
-      color: #a8e63a;
-      margin: 0.5rem 0;
-      transition: color 0.3s ease;
-    }
-    .offline {
-      color: #ff5555 !important;
-    }
-    .countdown {
-      margin-top: 1rem;
-      color: #8b949e;
-      font-size: 0.9rem;
-      opacity: 0;
-      animation: fadeIn 1s ease-in-out 1s forwards;
-    }
-    @keyframes fadeIn {
-      to {
-        opacity: 1;
-      }
-    }
-    @keyframes slideIn {
-      to {
-        opacity: 1;
-        transform: translateY(0);
-      }
-    }
-  </style>
+<meta charset="UTF-8" />
+<title>Status Serverů</title>
+<style>
+  body { font-family: Arial, sans-serif; background: #111; color: #eee; text-align: center; padding: 2rem;}
+  .online { color: #a8e63a; }
+  .offline { color: #ff5555; }
+</style>
 </head>
 <body>
-  <h1>TrojkaCraft - Stav serverů</h1>
-  <div class="status-box">
-    <p class="status"><strong>mc.3zscraft.cz:</strong> <span id="mc-status">Načítám...</span></p>
-    <p class="status"><strong>map.3zscraft.cz:</strong> <span id="map-status">Načítám...</span></p>
-    <p class="status"><strong>www.3zscraft.cz:</strong> <span id="web-status">Načítám...</span></p>
-    <p class="status offline" id="hosting-status"></p>
-    <p class="countdown">Obnovení za <span id="countdown">30</span> s</p>
-  </div>
 
-  <script>
-    const mcStatusEl = document.getElementById('mc-status');
-    const mapStatusEl = document.getElementById('map-status');
-    const webStatusEl = document.getElementById('web-status');
-    const hostingStatusEl = document.getElementById('hosting-status');
-    const countdownEl = document.getElementById('countdown');
+<h1>Status serverů</h1>
+<p>MC Server: <span id="mc-status">Načítám...</span></p>
+<p>Dynmapa: <span id="map-status">Načítám...</span></p>
 
-    let mcOnline = false;
-    let mapOnline = false;
+<script>
+  const mcStatusEl = document.getElementById('mc-status');
+  const mapStatusEl = document.getElementById('map-status');
 
-    async function checkWithTimeout(url, timeout = 5000) {
-      return Promise.race([
-        fetch(url, { method: 'HEAD', mode: 'cors', cache: 'no-cache' }),
-        new Promise((_, reject) => setTimeout(() => reject(new Error('Timeout')), timeout))
-      ]);
-    }
+  // Kontrola Dynmapy načtením JSON přes Image
+  function checkDynmap() {
+    return new Promise(resolve => {
+      const img = new Image();
+      img.src = 'http://map.3zscraft.cz:26636/tiles/_markers_/marker_world.json?cache=' + Date.now();
+      img.onload = () => {
+        mapStatusEl.textContent = 'Online';
+        mapStatusEl.className = 'online';
+        resolve(true);
+      };
+      img.onerror = () => {
+        mapStatusEl.textContent = 'Offline';
+        mapStatusEl.className = 'offline';
+        resolve(false);
+      };
+    });
+  }
 
-    async function checkMC() {
-      try {
-        const res = await fetch('https://sport-began.gl.joinmc.link', { method: 'HEAD', mode: 'cors', cache: 'no-cache' });
-        if (res.ok) {
-          mcOnline = true;
-          mcStatusEl.textContent = 'Online';
-          mcStatusEl.className = 'status';
-        } else {
-          throw new Error('Server neodpovídá správně');
-        }
-      } catch {
-        mcOnline = false;
-        mcStatusEl.textContent = 'Offline';
-        mcStatusEl.className = 'status offline';
+  // Kontrola MC serveru přes fetch (pouze pokud má HTTP endpoint)
+  async function checkMC() {
+    try {
+      const res = await fetch('https://mc.3zscraft.cz', { method: 'HEAD', cache: 'no-cache' });
+      if (res.ok) {
+        mcStatusEl.textContent = 'Online';
+        mcStatusEl.className = 'online';
+      } else {
+        throw new Error('Server neodpovídá');
       }
+    } catch {
+      mcStatusEl.textContent = 'Offline';
+      mcStatusEl.className = 'offline';
     }
+  }
 
-    function checkMap() {
-      return new Promise((resolve) => {
-        const img = new Image();
-        img.src = 'http://map.3zscraft.cz:26636/tiles/_markers_/marker_world.json?cache=' + Date.now();
+  // Spustíme obě kontroly
+  checkMC();
+  checkDynmap();
+</script>
 
-        img.onload = () => {
-          mapOnline = true;
-          mapStatusEl.textContent = 'Online';
-          mapStatusEl.className = 'status';
-          resolve();
-        };
-
-        img.onerror = () => {
-          mapOnline = false;
-          mapStatusEl.textContent = 'Offline';
-          mapStatusEl.className = 'status offline';
-          resolve();
-        };
-      });
-    }
-
-    async function checkWeb() {
-      try {
-        await checkWithTimeout('https://www.3zscraft.cz');
-        webStatusEl.textContent = 'Online';
-        webStatusEl.className = 'status';
-      } catch {
-        webStatusEl.textContent = 'Offline';
-        webStatusEl.className = 'status offline';
-      }
-    }
-
-    async function checkAll() {
-      mcStatusEl.textContent = mapStatusEl.textContent = webStatusEl.textContent = 'Načítám...';
-      hostingStatusEl.textContent = '';
-
-      if (!navigator.onLine) {
-        mcStatusEl.textContent = mapStatusEl.textContent = webStatusEl.textContent = 'Offline (bez připojení)';
-        mcStatusEl.className = mapStatusEl.className = webStatusEl.className = 'status offline';
-        hostingStatusEl.textContent = 'Není připojeno k internetu';
-        return;
-      }
-
-      await Promise.all([checkMC(), checkMap(), checkWeb()]);
-
-      if (!mcOnline && !mapOnline) {
-        hostingStatusEl.textContent = 'Náš hosting je vypnutý.';
-      }
-    }
-
-    function startCountdown() {
-      let time = 30;
-      countdownEl.textContent = time;
-      const interval = setInterval(() => {
-        time--;
-        countdownEl.textContent = time;
-        if (time <= 0) {
-          clearInterval(interval);
-          checkAll();
-          startCountdown();
-        }
-      }, 1000);
-    }
-
-    checkAll();
-    startCountdown();
-  </script>
 </body>
 </html>
