@@ -1,10 +1,10 @@
 <!DOCTYPE html>
 <html lang="cs">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>TrojkaCraft Status</title>
-  <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;700&display=swap" rel="stylesheet" />
   <style>
     body {
       margin: 0;
@@ -50,13 +50,11 @@
       opacity: 0;
       animation: fadeIn 1s ease-in-out 1s forwards;
     }
-
     @keyframes fadeIn {
       to {
         opacity: 1;
       }
     }
-
     @keyframes slideIn {
       to {
         opacity: 1;
@@ -87,18 +85,25 @@
 
     async function checkWithTimeout(url, timeout = 5000) {
       return Promise.race([
-        fetch(url, { method: 'GET', mode: 'no-cors' }),
+        fetch(url, { method: 'HEAD', mode: 'cors', cache: 'no-cache' }),
         new Promise((_, reject) => setTimeout(() => reject(new Error('Timeout')), timeout))
       ]);
     }
 
     async function checkMC() {
       try {
-        const res = await fetch('https://mcapi.us/server/status?ip=mc.3zscraft.cz');
+        const res = await fetch('https://api.mcsrvstat.us/2/mc.3zscraft.cz');
+        if (!res.ok) throw new Error('Network response not ok');
         const data = await res.json();
         mcOnline = data.online;
-        mcStatusEl.textContent = mcOnline ? 'Online' : 'Offline';
-        mcStatusEl.className = mcOnline ? 'status' : 'status offline';
+        if (mcOnline) {
+          const players = data.players && data.players.online !== undefined ? data.players.online : '?';
+          mcStatusEl.textContent = `Online – ${players} hráčů`;
+          mcStatusEl.className = 'status';
+        } else {
+          mcStatusEl.textContent = 'Offline';
+          mcStatusEl.className = 'status offline';
+        }
       } catch {
         mcOnline = false;
         mcStatusEl.textContent = 'Chyba';
@@ -108,7 +113,7 @@
 
     async function checkMap() {
       try {
-        await checkWithTimeout('feature-cards.gl.at.ply.gg');
+        await checkWithTimeout('https://map.3zscraft.cz:26636');
         mapOnline = true;
         mapStatusEl.textContent = 'Online';
         mapStatusEl.className = 'status';
