@@ -92,7 +92,7 @@
 
     async function checkMC() {
       try {
-        const res = await fetch('https://sport-began.gl.joinmc.link', { method: 'HEAD', mode: 'cors', cache: 'no-cache' });
+        const res = await fetch('sport-began.gl.joinmc.link', { method: 'HEAD', mode: 'cors', cache: 'no-cache' });
         if (res.ok) {
           mcOnline = true;
           mcStatusEl.textContent = 'Online';
