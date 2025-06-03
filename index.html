@@ -92,28 +92,24 @@
 
     async function checkMC() {
       try {
-        const res = await fetch('https://api.mcsrvstat.us/2/mc.3zscraft.cz');
-        if (!res.ok) throw new Error('Network response not ok');
-        const data = await res.json();
-        mcOnline = data.online;
-        if (mcOnline) {
-          const players = data.players && data.players.online !== undefined ? data.players.online : '?';
-          mcStatusEl.textContent = `Online – ${players} hráčů`;
+        const res = await fetch('https://sport-began.gl.joinmc.link', { method: 'HEAD', mode: 'cors', cache: 'no-cache' });
+        if (res.ok) {
+          mcOnline = true;
+          mcStatusEl.textContent = 'Online';
           mcStatusEl.className = 'status';
         } else {
-          mcStatusEl.textContent = 'Offline';
-          mcStatusEl.className = 'status offline';
+          throw new Error('Server neodpovídá správně');
         }
       } catch {
         mcOnline = false;
-        mcStatusEl.textContent = 'Chyba';
+        mcStatusEl.textContent = 'Offline';
         mcStatusEl.className = 'status offline';
       }
     }
 
     async function checkMap() {
       try {
-        await checkWithTimeout('https://map.3zscraft.cz:26636');
+        await checkWithTimeout('feature-cards.gl.at.ply.gg');
         mapOnline = true;
         mapStatusEl.textContent = 'Online';
         mapStatusEl.className = 'status';
