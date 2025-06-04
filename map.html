@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+  <meta charset="UTF-8">
+  <title>Kontrola dostupnosti mapy</title>
+</head>
+<body>
+  <h1>Stav mapy:</h1>
+  <p id="status">Kontroluji...</p>
+
+  <script>
+    const status = document.getElementById('status');
+    const img = new Image();
+    const timeout = 3000; // 3 sekundy timeout
+
+    let timedOut = false;
+    const timer = setTimeout(() => {
+      timedOut = true;
+      status.textContent = '❌ Server není dostupný (timeout)';
+    }, timeout);
+
+    img.onload = () => {
+      if (!timedOut) {
+        clearTimeout(timer);
+        status.textContent = '✅ Server je dostupný';
+      }
+    };
+
+    img.onerror = () => {
+      if (!timedOut) {
+        clearTimeout(timer);
+        status.textContent = '❌ Server není dostupný';
+      }
+    };
+
+    // Spustí se požadavek - pokus o načtení libovolného obrázku z daného portu
+    img.src = 'http://map.3zscraft.cz:26636/favicon.ico?' + new Date().getTime();
+  </script>
+</body>
+</html>
