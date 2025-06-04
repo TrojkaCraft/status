@@ -1,10 +1,10 @@
 <!DOCTYPE html>
 <html lang="cs">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>TrojkaCraft Status</title>
-  <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;700&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;700&display=swap" rel="stylesheet">
   <style>
     body {
       margin: 0;
@@ -43,9 +43,6 @@
     .offline {
       color: #ff5555 !important;
     }
-    .maintenance {
-      color: #ffaa00 !important;
-    }
     .countdown {
       margin-top: 1rem;
       color: #8b949e;
@@ -53,11 +50,13 @@
       opacity: 0;
       animation: fadeIn 1s ease-in-out 1s forwards;
     }
+
     @keyframes fadeIn {
       to {
         opacity: 1;
       }
     }
+
     @keyframes slideIn {
       to {
         opacity: 1;
@@ -67,50 +66,85 @@
   </style>
 </head>
 <body>
-  <h1>TrojkaCraft - Stav serveru</h1>
+  <h1>TrojkaCraft - Stav serverů</h1>
   <div class="status-box">
     <p class="status"><strong>mc.3zscraft.cz:</strong> <span id="mc-status">Načítám...</span></p>
-    <p class="status"><strong>Hráči online:</strong> <span id="players-status">Načítám...</span></p>
+    <p class="status"><strong>map.3zscraft.cz:</strong> <span id="map-status">Načítám...</span></p>
+    <p class="status"><strong>www.3zscraft.cz:</strong> <span id="web-status">Načítám...</span></p>
+    <p class="status offline" id="hosting-status"></p>
     <p class="countdown">Obnovení za <span id="countdown">30</span> s</p>
   </div>
 
   <script>
     const mcStatusEl = document.getElementById('mc-status');
-    const playersEl = document.getElementById('players-status');
+    const mapStatusEl = document.getElementById('map-status');
+    const webStatusEl = document.getElementById('web-status');
+    const hostingStatusEl = document.getElementById('hosting-status');
     const countdownEl = document.getElementById('countdown');
-    const serverIP = 'mc.3zscraft.cz';
+
+    let mcOnline = false;
+    let mapOnline = false;
+
+    async function checkWithTimeout(url, timeout = 5000) {
+      return Promise.race([
+        fetch(url, { method: 'HEAD', mode: 'no-cors' }),
+        new Promise((_, reject) => setTimeout(() => reject(new Error('Timeout')), timeout))
+      ]);
+    }
 
     async function checkMC() {
       try {
-        const res = await fetch(`https://api.mcsrvstat.us/2/${serverIP}`);
+        const res = await fetch('https://api.mcsrvstat.us/2/mc.3zscraft.cz');
         const data = await res.json();
-
-        if (data.online) {
-          const motd = (data.motd?.clean?.join(' ') || '').toLowerCase();
-          const isMaintenance = motd.includes('maintenance');
-
-          if (isMaintenance) {
-            mcStatusEl.textContent = 'Údržba';
-            mcStatusEl.className = 'status maintenance';
-            playersEl.textContent = 'Server je v režimu údržby';
-          } else {
-            mcStatusEl.textContent = 'Online';
-            mcStatusEl.className = 'status';
-            const online = data.players?.online ?? 0;
-            const max = data.players?.max ?? '?';
-            playersEl.textContent = `${online} / ${max}`;
-          }
-
-        } else {
-          mcStatusEl.textContent = 'Offline';
-          mcStatusEl.className = 'status offline';
-          playersEl.textContent = 'Nedostupné';
-        }
-      } catch (err) {
-        mcStatusEl.textContent = 'Chyba při načítání';
+        mcOnline = data.online;
+        mcStatusEl.textContent = mcOnline ? 'Online' : 'Offline';
+        mcStatusEl.className = mcOnline ? 'status' : 'status offline';
+      } catch {
+        mcOnline = false;
+        mcStatusEl.textContent = 'Chyba';
         mcStatusEl.className = 'status offline';
-        playersEl.textContent = 'Chyba';
-        console.error('Chyba při získávání dat:', err);
+      }
+    }
+
+    async function checkMap() {
+      try {
+        await checkWithTimeout('http://map.3zscraft.cz:26636');
+        mapOnline = true;
+        mapStatusEl.textContent = 'Online';
+        mapStatusEl.className = 'status';
+      } catch {
+        mapOnline = false;
+        mapStatusEl.textContent = 'Offline';
+        mapStatusEl.className = 'status offline';
+      }
+    }
+
+    async function checkWeb() {
+      try {
+        await checkWithTimeout('http://www.3zscraft.cz');
+        webStatusEl.textContent = 'Online';
+        webStatusEl.className = 'status';
+      } catch {
+        webStatusEl.textContent = 'Offline';
+        webStatusEl.className = 'status offline';
+      }
+    }
+
+    async function checkAll() {
+      mcStatusEl.textContent = mapStatusEl.textContent = webStatusEl.textContent = 'Načítám...';
+      hostingStatusEl.textContent = '';
+
+      if (!navigator.onLine) {
+        mcStatusEl.textContent = mapStatusEl.textContent = webStatusEl.textContent = 'Offline (bez připojení)';
+        mcStatusEl.className = mapStatusEl.className = webStatusEl.className = 'status offline';
+        hostingStatusEl.textContent = 'Není připojeno k internetu';
+        return;
+      }
+
+      await Promise.all([checkMC(), checkMap(), checkWeb()]);
+
+      if (!mcOnline && !mapOnline) {
+        hostingStatusEl.textContent = 'Náš hosting je vypnutý.';
       }
     }
 
@@ -122,13 +156,13 @@
         countdownEl.textContent = time;
         if (time <= 0) {
           clearInterval(interval);
-          checkMC();
+          checkAll();
           startCountdown();
         }
       }, 1000);
     }
 
-    checkMC();
+    checkAll();
     startCountdown();
   </script>
 </body>
