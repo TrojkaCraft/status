@@ -1,17 +1,16 @@
 <!DOCTYPE html>
 <html lang="cs">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>TrojkaCraft - Status</title>
-  <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;700&display=swap" rel="stylesheet">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>TrojkaCraft Status</title>
+  <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;700&display=swap" rel="stylesheet" />
   <style>
     body {
+      margin: 0;
       font-family: 'Montserrat', sans-serif;
       background-color: #0d1117;
       color: #e6edf3;
-      margin: 0;
-      padding: 0;
       display: flex;
       flex-direction: column;
       align-items: center;
@@ -22,6 +21,8 @@
     h1 {
       color: #a8e63a;
       margin-bottom: 1rem;
+      opacity: 0;
+      animation: fadeIn 1s ease-in-out forwards;
     }
     .status-box {
       background-color: #21262d;
@@ -30,20 +31,38 @@
       border: 2px solid #30363d;
       max-width: 600px;
       width: 90%;
+      transform: translateY(20px);
+      opacity: 0;
+      animation: slideIn 1s ease-out 0.5s forwards;
     }
     .status {
-      margin: 0.5rem 0;
-    }
-    .online {
       color: #a8e63a;
+      margin: 0.5rem 0;
+      transition: color 0.3s ease;
     }
     .offline {
-      color: #ff5555;
+      color: #ff5555 !important;
+    }
+    .maintenance {
+      color: #ffaa00 !important;
     }
     .countdown {
       margin-top: 1rem;
       color: #8b949e;
       font-size: 0.9rem;
+      opacity: 0;
+      animation: fadeIn 1s ease-in-out 1s forwards;
+    }
+    @keyframes fadeIn {
+      to {
+        opacity: 1;
+      }
+    }
+    @keyframes slideIn {
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
     }
   </style>
 </head>
@@ -51,71 +70,65 @@
   <h1>TrojkaCraft - Stav serveru</h1>
   <div class="status-box">
     <p class="status"><strong>mc.3zscraft.cz:</strong> <span id="mc-status">Načítám...</span></p>
-    <p class="status"><strong>Hráči:</strong> <span id="players">Načítám...</span></p>
-    <p class="status"><strong>Web:</strong> <span id="web-status">Načítám...</span></p>
+    <p class="status"><strong>Hráči online:</strong> <span id="players-status">Načítám...</span></p>
     <p class="countdown">Obnovení za <span id="countdown">30</span> s</p>
   </div>
 
   <script>
     const mcStatusEl = document.getElementById('mc-status');
-    const playersEl = document.getElementById('players');
-    const webStatusEl = document.getElementById('web-status');
+    const playersEl = document.getElementById('players-status');
     const countdownEl = document.getElementById('countdown');
+    const serverIP = 'mc.3zscraft.cz';
 
     async function checkMC() {
       try {
-        const res = await fetch('https://api.mcsrvstat.us/2/mc.3zscraft.cz');
+        const res = await fetch(`https://api.mcsrvstat.us/2/${serverIP}`);
         const data = await res.json();
 
         if (data.online) {
-          mcStatusEl.textContent = 'Online';
-          mcStatusEl.className = 'online';
-          playersEl.textContent = `${data.players.online ?? 0} / ${data.players.max ?? '?'}`;
+          const motd = (data.motd?.clean?.join(' ') || '').toLowerCase();
+          const isMaintenance = motd.includes('maintenance');
+
+          if (isMaintenance) {
+            mcStatusEl.textContent = 'Údržba';
+            mcStatusEl.className = 'status maintenance';
+            playersEl.textContent = 'Server je v režimu údržby';
+          } else {
+            mcStatusEl.textContent = 'Online';
+            mcStatusEl.className = 'status';
+            const online = data.players?.online ?? 0;
+            const max = data.players?.max ?? '?';
+            playersEl.textContent = `${online} / ${max}`;
+          }
+
         } else {
           mcStatusEl.textContent = 'Offline';
-          mcStatusEl.className = 'offline';
+          mcStatusEl.className = 'status offline';
           playersEl.textContent = 'Nedostupné';
         }
-      } catch {
-        mcStatusEl.textContent = 'Chyba';
-        mcStatusEl.className = 'offline';
+      } catch (err) {
+        mcStatusEl.textContent = 'Chyba při načítání';
+        mcStatusEl.className = 'status offline';
         playersEl.textContent = 'Chyba';
+        console.error('Chyba při získávání dat:', err);
       }
-    }
-
-    async function checkWeb() {
-      try {
-        await fetch('https://www.3zscraft.cz', { method: 'HEAD', mode: 'no-cors' });
-        webStatusEl.textContent = 'Online';
-        webStatusEl.className = 'online';
-      } catch {
-        webStatusEl.textContent = 'Offline';
-        webStatusEl.className = 'offline';
-      }
-    }
-
-    async function refresh() {
-      mcStatusEl.textContent = 'Načítám...';
-      playersEl.textContent = 'Načítám...';
-      webStatusEl.textContent = 'Načítám...';
-      await Promise.all([checkMC(), checkWeb()]);
     }
 
     function startCountdown() {
       let time = 30;
       countdownEl.textContent = time;
-      const timer = setInterval(() => {
+      const interval = setInterval(() => {
         time--;
         countdownEl.textContent = time;
         if (time <= 0) {
-          clearInterval(timer);
-          refresh();
+          clearInterval(interval);
+          checkMC();
           startCountdown();
         }
       }, 1000);
     }
 
-    refresh();
+    checkMC();
     startCountdown();
   </script>
 </body>
