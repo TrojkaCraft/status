@@ -2,39 +2,40 @@
 <html lang="cs">
 <head>
   <meta charset="UTF-8">
-  <title>Kontrola dostupnosti mapy</title>
+  <title>Kontrola dostupnosti serveru</title>
 </head>
 <body>
-  <h1>Stav mapy:</h1>
+  <h1>Stav serveru 28.ip.gl.ply.gg</h1>
   <p id="status">Kontroluji...</p>
 
   <script>
     const status = document.getElementById('status');
     const img = new Image();
-    const timeout = 3000; // 3 sekundy timeout
+    const timeout = 5000; // 5 sekund
 
-    let timedOut = false;
+    let isTimeout = false;
+
     const timer = setTimeout(() => {
-      timedOut = true;
-      status.textContent = '❌ Server není dostupný (timeout)';
+      isTimeout = true;
+      status.textContent = '❌ Server je nedostupný (timeout)';
     }, timeout);
 
     img.onload = () => {
-      if (!timedOut) {
+      if (!isTimeout) {
         clearTimeout(timer);
         status.textContent = '✅ Server je dostupný';
       }
     };
 
     img.onerror = () => {
-      if (!timedOut) {
+      if (!isTimeout) {
         clearTimeout(timer);
-        status.textContent = '❌ Server není dostupný';
+        status.textContent = '❌ Server je nedostupný';
       }
     };
 
-    // Spustí se požadavek - pokus o načtení libovolného obrázku z daného portu
-    img.src = 'http://map.3zscraft.cz:26636/favicon.ico?' + new Date().getTime();
+    // Pokus o načtení obrázku – pokud server odpoví, je považován za dostupný
+    img.src = "http://28.ip.gl.ply.gg/favicon.ico?" + new Date().getTime();
   </script>
 </body>
 </html>
