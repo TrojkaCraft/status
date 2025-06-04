@@ -1,79 +1,5 @@
-<!DOCTYPE html>
-<html lang="cs">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>TrojkaCraft Status</title>
-  <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;700&display=swap" rel="stylesheet" />
-  <style>
-    body {
-      margin: 0;
-      font-family: 'Montserrat', sans-serif;
-      background-color: #0d1117;
-      color: #e6edf3;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      min-height: 100vh;
-      text-align: center;
-    }
-    h1 {
-      color: #a8e63a;
-      margin-bottom: 1rem;
-      opacity: 0;
-      animation: fadeIn 1s ease-in-out forwards;
-    }
-    .status-box {
-      background-color: #21262d;
-      padding: 2rem;
-      border-radius: 10px;
-      border: 2px solid #30363d;
-      max-width: 600px;
-      width: 90%;
-      transform: translateY(20px);
-      opacity: 0;
-      animation: slideIn 1s ease-out 0.5s forwards;
-    }
-    .status {
-      color: #a8e63a;
-      margin: 0.5rem 0;
-      transition: color 0.3s ease;
-    }
-    .offline {
-      color: #ff5555 !important;
-    }
-    .countdown {
-      margin-top: 1rem;
-      color: #8b949e;
-      font-size: 0.9rem;
-      opacity: 0;
-      animation: fadeIn 1s ease-in-out 1s forwards;
-    }
-    @keyframes fadeIn {
-      to {
-        opacity: 1;
-      }
-    }
-    @keyframes slideIn {
-      to {
-        opacity: 1;
-        transform: translateY(0);
-      }
-    }
-  </style>
-</head>
-<body>
-  <h1>TrojkaCraft - Stav serverů</h1>
-  <div class="status-box">
-    <p class="status"><strong>mc.3zscraft.cz:</strong> <span id="mc-status">Načítám...</span></p>
-    <p class="status"><strong>event.3zscraft.cz:</strong> <span id="event-status">Načítám...</span></p>
-    <p class="status"><strong>www.3zscraft.cz:</strong> <span id="web-status">Načítám...</span></p>
-    <p class="status offline" id="hosting-status"></p>
-    <p class="countdown">Obnovení za <span id="countdown">30</span> s</p>
-  </div>
-
-  <script>
+<script>
+  window.addEventListener("DOMContentLoaded", () => {
     const mcStatusEl = document.getElementById('mc-status');
     const eventStatusEl = document.getElementById('event-status');
     const webStatusEl = document.getElementById('web-status');
@@ -87,7 +13,6 @@
       try {
         const res = await fetch('https://api.mcsrvstat.us/2/mc.3zscraft.cz');
         const data = await res.json();
-
         if (data.online) {
           mcOnline = true;
           mcStatusEl.textContent = 'Online';
@@ -108,7 +33,6 @@
       try {
         const res = await fetch('https://api.mcsrvstat.us/2/event.3zscraft.cz');
         const data = await res.json();
-
         if (data.online) {
           eventOnline = true;
           eventStatusEl.textContent = 'Online';
@@ -149,4 +73,34 @@
       if (!navigator.onLine) {
         mcStatusEl.textContent = 'Offline (bez připojení)';
         eventStatusEl.textContent = 'Offline (bez připojení)';
-        webStatusEl.textContent = 'Off
+        webStatusEl.textContent = 'Offline (bez připojení)';
+        mcStatusEl.className = eventStatusEl.className = webStatusEl.className = 'status offline';
+        hostingStatusEl.textContent = 'Není připojeno k internetu';
+        return;
+      }
+
+      await Promise.all([checkMC(), checkEvent(), checkWeb()]);
+
+      if (!mcOnline && !eventOnline) {
+        hostingStatusEl.textContent = 'Náš hosting je vypnutý.';
+      }
+    }
+
+    function startCountdown() {
+      let time = 30;
+      countdownEl.textContent = time;
+      const interval = setInterval(() => {
+        time--;
+        countdownEl.textContent = time;
+        if (time <= 0) {
+          clearInterval(interval);
+          checkAll();
+          startCountdown(); // restartujeme nový odpočet
+        }
+      }, 1000);
+    }
+
+    checkAll();
+    startCountdown();
+  });
+</script>
