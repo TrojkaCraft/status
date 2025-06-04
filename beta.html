@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>TrojkaCraft - Status</title>
+  <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;700&display=swap" rel="stylesheet">
+  <style>
+    body {
+      font-family: 'Montserrat', sans-serif;
+      background-color: #0d1117;
+      color: #e6edf3;
+      margin: 0;
+      padding: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      text-align: center;
+    }
+    h1 {
+      color: #a8e63a;
+      margin-bottom: 1rem;
+    }
+    .status-box {
+      background-color: #21262d;
+      padding: 2rem;
+      border-radius: 10px;
+      border: 2px solid #30363d;
+      max-width: 600px;
+      width: 90%;
+    }
+    .status {
+      margin: 0.5rem 0;
+    }
+    .online {
+      color: #a8e63a;
+    }
+    .offline {
+      color: #ff5555;
+    }
+    .countdown {
+      margin-top: 1rem;
+      color: #8b949e;
+      font-size: 0.9rem;
+    }
+  </style>
+</head>
+<body>
+  <h1>TrojkaCraft - Stav serveru</h1>
+  <div class="status-box">
+    <p class="status"><strong>mc.3zscraft.cz:</strong> <span id="mc-status">Načítám...</span></p>
+    <p class="status"><strong>Hráči:</strong> <span id="players">Načítám...</span></p>
+    <p class="status"><strong>Web:</strong> <span id="web-status">Načítám...</span></p>
+    <p class="countdown">Obnovení za <span id="countdown">30</span> s</p>
+  </div>
+
+  <script>
+    const mcStatusEl = document.getElementById('mc-status');
+    const playersEl = document.getElementById('players');
+    const webStatusEl = document.getElementById('web-status');
+    const countdownEl = document.getElementById('countdown');
+
+    async function checkMC() {
+      try {
+        const res = await fetch('https://api.mcsrvstat.us/2/mc.3zscraft.cz');
+        const data = await res.json();
+
+        if (data.online) {
+          mcStatusEl.textContent = 'Online';
+          mcStatusEl.className = 'online';
+          playersEl.textContent = `${data.players.online ?? 0} / ${data.players.max ?? '?'}`;
+        } else {
+          mcStatusEl.textContent = 'Offline';
+          mcStatusEl.className = 'offline';
+          playersEl.textContent = 'Nedostupné';
+        }
+      } catch {
+        mcStatusEl.textContent = 'Chyba';
+        mcStatusEl.className = 'offline';
+        playersEl.textContent = 'Chyba';
+      }
+    }
+
+    async function checkWeb() {
+      try {
+        await fetch('https://www.3zscraft.cz', { method: 'HEAD', mode: 'no-cors' });
+        webStatusEl.textContent = 'Online';
+        webStatusEl.className = 'online';
+      } catch {
+        webStatusEl.textContent = 'Offline';
+        webStatusEl.className = 'offline';
+      }
+    }
+
+    async function refresh() {
+      mcStatusEl.textContent = 'Načítám...';
+      playersEl.textContent = 'Načítám...';
+      webStatusEl.textContent = 'Načítám...';
+      await Promise.all([checkMC(), checkWeb()]);
+    }
+
+    function startCountdown() {
+      let time = 30;
+      countdownEl.textContent = time;
+      const timer = setInterval(() => {
+        time--;
+        countdownEl.textContent = time;
+        if (time <= 0) {
+          clearInterval(timer);
+          refresh();
+          startCountdown();
+        }
+      }, 1000);
+    }
+
+    refresh();
+    startCountdown();
+  </script>
+</body>
+</html>
